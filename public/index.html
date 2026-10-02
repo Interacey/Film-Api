@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121826">
+<title>Filmkritik – Filme & Serien bewerten</title>
+<style>
+  :root {
+    --ink: #121826;
+    --panel: #1b2336;
+    --panel-2: #243049;
+    --line: #34415f;
+    --text: #eef1f6;
+    --muted: #8f9bb0;
+    --marquee: #ffc933;
+    --red: #ef4b5b;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--ink); color: var(--text);
+    font: 16px/1.45 var(--sans);
+    padding: env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom));
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--marquee); outline-offset: 2px; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  header { padding: 28px 0 12px; }
+  h1 { font: 700 2.1rem/1.05 var(--serif); margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+
+  .controls { position: sticky; top: 0; z-index: 5; background: var(--ink); padding: 10px 0 12px; border-bottom: 1px solid var(--line); }
+  .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tab { flex: 1; padding: 9px 0; border-radius: 999px; border: 1px solid var(--line); background: none; cursor: pointer; }
+  .tab[aria-pressed="true"] { background: var(--text); color: var(--ink); border-color: var(--text); font-weight: 600; }
+  .row { display: flex; gap: 8px; }
+  .field { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; }
+  .row .field:first-child { flex: 1; }
+  .row select.field { width: auto; }
+
+  ul.list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 12px; }
+  .card {
+    display: grid; grid-template-columns: 1fr auto; width: 100%; text-align: left;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 0; cursor: pointer; overflow: hidden;
+  }
+  .card:active { background: var(--panel-2); }
+  .card .info { padding: 14px 16px; min-width: 0; }
+  .card h2 { font: 700 1.2rem/1.2 var(--serif); margin: 0 0 4px; }
+  .card .meta { color: var(--muted); font-size: .88rem; }
+  .card .desc { margin: 8px 0 0; color: #c4ccda; font-size: .92rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Kinokarten-Abriss: das Markenzeichen der App */
+  .stub {
+    position: relative; width: 84px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--marquee); color: var(--ink); padding: 8px;
+    -webkit-mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) ; mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000);
+  }
+  .stub::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 10px; border-left: 2px dashed rgba(18,24,38,.35); }
+  .stub b { font: 700 2rem/1 var(--serif); }
+  .stub small { font-size: .72rem; margin-top: 2px; }
+  .stub.none { background: var(--panel-2); color: var(--muted); }
+  .stub.none b { font-size: 1.4rem; }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 16px; }
+
+  .fab {
+    position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 6;
+    background: var(--marquee); color: var(--ink); border: 0; border-radius: 999px; padding: 14px 20px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  }
+
+  /* Bottom sheet */
+  dialog { border: 0; padding: 0; background: transparent; color: var(--text); max-width: 100%; width: 100%; margin: auto 0 0; max-height: 92dvh; }
+  dialog::backdrop { background: rgba(5,8,15,.7); }
+  .sheet { background: var(--panel); border-radius: 20px 20px 0 0; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; max-height: 92dvh; overflow-y: auto; border: 1px solid var(--line); border-bottom: 0; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .sheet h3 { font: 700 1.5rem/1.15 var(--serif); margin: 0; }
+  .x { background: var(--panel-2); border: 0; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; flex: none; }
+  .facts { color: var(--muted); font-size: .9rem; margin: 6px 0 12px; }
+  .score-big { display: flex; align-items: baseline; gap: 8px; margin: 12px 0; }
+  .score-big b { font: 700 2.6rem/1 var(--serif); color: var(--marquee); }
+  h4 { margin: 20px 0 8px; font-size: 1rem; }
+
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 0; }
+  .chip { padding: 10px 0; border-radius: 10px; border: 1px solid var(--line); background: var(--ink); cursor: pointer; font-weight: 600; }
+  .chip[aria-pressed="true"] { background: var(--marquee); color: var(--ink); border-color: var(--marquee); }
+
+  .review { border-top: 1px solid var(--line); padding: 12px 0; }
+  .review .top { display: flex; justify-content: space-between; gap: 8px; }
+  .review p { margin: 4px 0 0; color: #c4ccda; }
+  .link { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; padding: 4px; }
+
+  label { display: block; margin: 12px 0 4px; font-size: .9rem; color: var(--muted); }
+  textarea.field { min-height: 72px; resize: vertical; }
+  .btn { border: 0; border-radius: 10px; padding: 12px 16px; font-weight: 700; cursor: pointer; background: var(--marquee); color: var(--ink); }
+  .btn.ghost { background: var(--panel-2); color: var(--text); }
+  .btn.danger { background: none; color: var(--red); border: 1px solid var(--red); }
+  .actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom)); background: var(--text); color: var(--ink); padding: 10px 16px; border-radius: 10px; z-index: 20; font-weight: 600; }
+  .toast.err { background: var(--red); color: #fff; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: no-preference) { dialog[open] .sheet { animation: up .22s ease-out; } }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Filmkritik</h1>
+    <p>Filme und Serien bewerten – deine Daten kommen live aus der REST-API.</p>
+  </header>
+
+  <div class="controls">
+    <div class="tabs" role="group" aria-label="Art filtern">
+      <button class="tab" data-type="" aria-pressed="true">Alle</button>
+      <button class="tab" data-type="movie" aria-pressed="false">Filme</button>
+      <button class="tab" data-type="series" aria-pressed="false">Serien</button>
+    </div>
+    <div class="row">
+      <input id="q" class="field" type="search" placeholder="Titel suchen" aria-label="Titel suchen">
+      <select id="sort" class="field" aria-label="Sortierung">
+        <option value="rating:desc">Beste zuerst</option>
+        <option value="title:asc">A–Z</option>
+        <option value="year:desc">Neueste</option>
+      </select>
+    </div>
+  </div>
+
+  <ul id="list" class="list"></ul>
+  <p id="empty" class="empty" hidden>Keine Treffer. Ändere die Suche oder füge einen neuen Titel hinzu.</p>
+</div>
+
+<button class="fab" id="add">+ Titel hinzufügen</button>
+
+<dialog id="detail"><div class="sheet" id="detailBody"></div></dialog>
+<dialog id="form"><div class="sheet" id="formBody"></div></dialog>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const API = "/api";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const state = { type: "", q: "", sort: "rating:desc", openId: null, myScore: 0 };
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: opts.body ? { "Content-Type": "application/json" } : {},
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error([data.error, ...(data.details || [])].filter(Boolean).join(": ") || "Fehler");
+  return data;
+}
+
+function toast(msg, isErr) {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "toast" + (isErr ? " err" : ""); t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 2600);
+}
+
+const facts = (t) => [
+  t.type === "movie" ? "Film" : "Serie", t.year,
+  t.type === "movie" && t.durationMinutes ? t.durationMinutes + " Min." : null,
+  t.type === "series" && t.seasons ? t.seasons + " Staffeln" : null,
+  t.genres?.join(", ")
+].filter(Boolean).join(" · ");
+
+/* ---------- Liste ---------- */
+async function loadList() {
+  const [sort, order] = state.sort.split(":");
+  const p = new URLSearchParams({ sort, order, limit: 100 });
+  if (state.type) p.set("type", state.type);
+  if (state.q) p.set("q", state.q);
+  try {
+    const { data } = await api("/titles?" + p);
+    $("#list").innerHTML = data.map((t) => `
+      <li><button class="card" data-id="${esc(t.id)}">
+        <div class="info">
+          <h2>${esc(t.title)}</h2>
+          <div class="meta">${esc(facts(t))}</div>
+          ${t.description ? `<p class="desc">${esc(t.description)}</p>` : ""}
+        </div>
+        <div class="stub ${t.averageRating === null ? "none" : ""}" aria-label="Durchschnitt ${t.averageRating ?? "keine Bewertung"}">
+          <b>${t.averageRating === null ? "–" : t.averageRating.toString().replace(".", ",")}</b>
+          <small>${t.ratingCount} ${t.ratingCount === 1 ? "Stimme" : "Stimmen"}</small>
+        </div>
+      </button></li>`).join("");
+    $("#empty").hidden = data.length > 0;
+  } catch (e) { toast("Server nicht erreichbar", true); }
+}
+
+/* ---------- Detail ---------- */
+async function openDetail(id) {
+  state.openId = id; state.myScore = 0;
+  const t = await api("/titles/" + id);
+  const avg = t.averageRating === null ? "–" : t.averageRating.toString().replace(".", ",");
+  $("#detailBody").innerHTML = `
+    <div class="sheet-head">
+      <h3>${esc(t.title)}</h3>
+      <button class="x" data-close aria-label="Schließen">✕</button>
+    </div>
+    <div class="facts">${esc(facts(t))}${t.director ? " · Regie: " + esc(t.director) : ""}</div>
+    ${t.description ? `<p>${esc(t.description)}</p>` : ""}
+    <div class="score-big"><b>${avg}</b><span>von 10 · ${t.ratingCount} ${t.ratingCount === 1 ? "Bewertung" : "Bewertungen"}</span></div>
+
+    <h4>Deine Bewertung</h4>
+    <div class="chips" id="chips">${[1,2,3,4,5,6,7,8,9,10].map((n) => `<button class="chip" data-score="${n}" aria-pressed="false">${n}</button>`).join("")}</div>
+    <label for="rAuthor">Dein Name</label>
+    <input id="rAuthor" class="field" maxlength="40" placeholder="Anonym" value="${esc(localStorage.getItem("author") || "")}">
+    <label for="rComment">Kommentar (optional)</label>
+    <textarea id="rComment" class="field" maxlength="1000"></textarea>
+    <div class="actions"><button class="btn" id="sendRating">Bewertung abgeben</button></div>
+
+    <h4>Bewertungen</h4>
+    <div id="reviews">${t.ratings.length ? t.ratings.slice().reverse().map((r) => `
+      <div class="review">
+        <div class="top"><strong>${esc(r.author)}</strong><span>${r.score}/10</span></div>
+        ${r.comment ? `<p>${esc(r.comment)}</p>` : ""}
+        <button class="link" data-del-rating="${esc(r.id)}">Löschen</button>
+      </div>`).join("") : '<p class="meta" style="color:var(--muted)">Noch keine Bewertung. Mach den Anfang.</p>'}</div>
+
+    <div class="actions">
+      <button class="btn ghost" id="editTitle">Titel bearbeiten</button>
+      <button class="btn danger" id="delTitle">Titel löschen</button>
+    </div>`;
+  if (!$("#detail").open) $("#detail").showModal();
+}
+
+/* ---------- Formular (neu / bearbeiten) ---------- */
+async function openForm(id) {
+  const t = id ? await api("/titles/" + id) : { type: "movie", genres: [] };
+  $("#formBody").innerHTML = `
+    <div class="sheet-head">
+      <h3>${id ? "Titel bearbeiten" : "Neuen Titel hinzufügen"}</h3>
+      <button class="x" data-close aria-label="Schließen">✕</button>
+    </div>
+    <label for="fType">Art</label>
+    <select id="fType" class="field"><option value="movie" ${t.type === "movie" ? "selected" : ""}>Film</option><option value="series" ${t.type === "series" ? "selected" : ""}>Serie</option></select>
+    <label for="fTitle">Titel</label>
+    <input id="fTitle" class="field" value="${esc(t.title)}">
+    <div class="grid2">
+      <div><label for="fYear">Jahr</label><input id="fYear" class="field" type="number" inputmode="numeric" value="${esc(t.year)}"></div>
+      <div id="fMovieBox"><label for="fDur">Dauer (Min.)</label><input id="fDur" class="field" type="number" inputmode="numeric" value="${esc(t.durationMinutes)}"></div>
+      <div id="fSeriesBox" hidden><label for="fSeasons">Staffeln</label><input id="fSeasons" class="field" type="number" inputmode="numeric" value="${esc(t.seasons)}"></div>
+    </div>
+    <label for="fGenres">Genres (mit Komma trennen)</label>
+    <input id="fGenres" class="field" value="${esc((t.genres || []).join(", "))}">
+    <label for="fDir">Regie</label>
+    <input id="fDir" class="field" value="${esc(t.director)}">
+    <label for="fDesc">Beschreibung</label>
+    <textarea id="fDesc" class="field">${esc(t.description)}</textarea>
+    <div class="actions"><button class="btn" id="saveTitle" data-id="${esc(id || "")}">Speichern</button></div>`;
+  const sync = () => {
+    const s = $("#fType").value === "series";
+    $("#fSeriesBox").hidden = !s; $("#fMovieBox").hidden = s;
+  };
+  $("#fType").onchange = sync; sync();
+  $("#detail").close();
+  $("#form").showModal();
+}
+
+async function saveTitle(id) {
+  const type = $("#fType").value;
+  const body = {
+    type, title: $("#fTitle").value, year: $("#fYear").value,
+    genres: $("#fGenres").value.split(",").map((s) => s.trim()).filter(Boolean),
+    director: $("#fDir").value, description: $("#fDesc").value
+  };
+  if (type === "movie" && $("#fDur").value) body.durationMinutes = $("#fDur").value;
+  if (type === "series" && $("#fSeasons").value) body.seasons = $("#fSeasons").value;
+  try {
+    const saved = id ? await api("/titles/" + id, { method: "PUT", body }) : await api("/titles", { method: "POST", body });
+    $("#form").close(); toast(id ? "Gespeichert" : "Hinzugefügt");
+    await loadList(); openDetail(saved.id);
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", async (e) => {
+  const el = e.target.closest("button, .card");
+  if (!el) return;
+  try {
+    if (el.dataset.close !== undefined) el.closest("dialog").close();
+    else if (el.classList.contains("card")) openDetail(el.dataset.id);
+    else if (el.classList.contains("tab")) {
+      document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-pressed", b === el));
+      state.type = el.dataset.type; loadList();
+    }
+    else if (el.classList.contains("chip")) {
+      state.myScore = Number(el.dataset.score);
+      document.querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", b === el));
+    }
+    else if (el.id === "sendRating") {
+      if (!state.myScore) return toast("Wähle zuerst 1 bis 10 Punkte", true);
+      const author = $("#rAuthor").value; localStorage.setItem("author", author);
+      await api(`/titles/${state.openId}/ratings`, { method: "POST", body: { score: state.myScore, author, comment: $("#rComment").value } });
+      toast("Bewertung gespeichert"); await openDetail(state.openId); loadList();
+    }
+    else if (el.dataset.delRating) {
+      await api("/ratings/" + el.dataset.delRating, { method: "DELETE" });
+      toast("Bewertung gelöscht"); await openDetail(state.openId); loadList();
+    }
+    else if (el.id === "editTitle") openForm(state.openId);
+    else if (el.id === "delTitle") {
+      if (!confirm("Diesen Titel samt Bewertungen löschen?")) return;
+      await api("/titles/" + state.openId, { method: "DELETE" });
+      $("#detail").close(); toast("Titel gelöscht"); loadList();
+    }
+    else if (el.id === "saveTitle") saveTitle(el.dataset.id);
+    else if (el.id === "add") openForm(null);
+  } catch (err) { toast(err.message, true); }
+});
+$("#q").addEventListener("input", (e) => { state.q = e.target.value; clearTimeout($("#q").h); $("#q").h = setTimeout(loadList, 250); });
+$("#sort").addEventListener("change", (e) => { state.sort = e.target.value; loadList(); });
+document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+
+loadList();
+</script>
+</body>
+</html>
