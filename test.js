@@ -42,6 +42,11 @@ const server = app.listen(0, async () => {
     r = await call("DELETE", "/titles/" + id); assert.equal(r.status, 204);
     r = await call("GET", "/titles/" + id); assert.equal(r.status, 404);
 
+    const docs = await fetch(base.replace("/api", "") + "/docs/");
+    assert.equal(docs.status, 200);
+    const spec = await (await fetch(base.replace("/api", "") + "/docs.json")).json();
+    assert.equal(spec.openapi, "3.0.3");
+
     console.log("Alle Tests bestanden ✔");
   } catch (e) { console.error("Test fehlgeschlagen:", e); process.exitCode = 1; }
   server.close();

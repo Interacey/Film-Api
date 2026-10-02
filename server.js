@@ -3,6 +3,8 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const swaggerUi = require("swagger-ui-express");
+const openapi = require("./openapi");
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = process.env.DB_FILE || path.join(__dirname, "data", "db.json");
@@ -146,6 +148,10 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "100kb" }));
 app.use(express.static(path.join(__dirname, "public"))); // Bonus: Handy-Web-App
+
+// API-Dokumentation: /docs (Swagger UI) und /docs.json (OpenAPI-Rohdaten)
+app.get("/docs.json", (req, res) => res.json(openapi));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi, { customSiteTitle: "Film- & Serien-API – Doku" }));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 

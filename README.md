@@ -11,6 +11,11 @@ npm start          # http://localhost:3000
 npm test           # testet alle Endpunkte
 ```
 
+## Dokumentation
+
+Interaktive API-Doku (Swagger UI) unter **`/docs`**, Rohdaten unter `/docs.json`.
+Mit **Try it out** lassen sich alle Endpunkte direkt im Browser ausprobieren.
+
 ## Endpunkte
 
 | Methode | Pfad | Beschreibung |
